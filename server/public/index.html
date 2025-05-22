@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Filières</title>
+</head>
+<body>
+  <h1>Liste des filières</h1>
+  <ul id="liste"></ul>
+
+  <script>
+    fetch('/api/filieres')
+      .then(res => res.json())
+      .then(data => {
+        const ul = document.getElementById('liste');
+        data.forEach(f => {
+          const li = document.createElement('li');
+          li.textContent = `${f.nom} — ${f.description}`;
+          ul.appendChild(li);
+        });
+      });
+  </script>
+</body>
+</html>
