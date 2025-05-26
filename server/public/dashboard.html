@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard EV-LY</title>
+</head>
+<body>
+  <h1>Dashboard des filières</h1>
+
+  <label for="domaineFilter">Filtrer par domaine :</label>
+  <select id="domaineFilter"></select>
+
+  <div id="filieresContainer"></div>
+
+  <script>
+    const domaineFilter = document.getElementById('domaineFilter');
+    const filieresContainer = document.getElementById('filieresContainer');
+
+    // Charger domaines dans filtre
+    fetch('/api/domaines')
+      .then(res => res.json())
+      .then(domaines => {
+        domaineFilter.innerHTML = '<option value="">Tous les domaines</option>';
+        domaines.forEach(d => {
+          const option = document.createElement('option');
+          option.value = d.id;
+          option.textContent = d.nom;
+          domaineFilter.appendChild(option);
+        });
+
+        loadFilieres();
+      });
+
+    domaineFilter.addEventListener('change', () => {
+      loadFilieres(domaineFilter.value);
+    });
+
+    function loadFilieres(domaineId) {
+      let url = '/api/filieres';
+      if (domaineId) url += '?domaine_id=' + encodeURIComponent(domaineId);
+
+      fetch(url)
+        .then(res => res.json())
+        .then(filieres => {
+          filieresContainer.innerHTML = '';
+          if (filieres.length === 0) {
+            filieresContainer.textContent = 'Aucune filière trouvée';
+            return;
+          }
+
+          filieres.forEach(filiere => {
+            const div = document.createElement('div');
+            div.innerHTML = `<h3>${filiere.nom}</h3><p>${filiere.description || ''}</p>`;
+            filieresContainer.appendChild(div);
+          });
+        });
+    }
+  </script>
+</body>
+</html>

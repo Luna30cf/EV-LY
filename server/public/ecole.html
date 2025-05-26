@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>École - Gestion des filières et spécialités</title>
+</head>
+<body>
+  <h1>Gestion des filières et spécialités</h1>
+
+  <h2>Ajouter une filière</h2>
+  <form id="formFiliere" method="POST" action="/api/filieres">
+    <label>Domaine:
+      <select id="domaineSelect" name="domaine_id" required></select>
+    </label><br />
+    <label>Nom filière: <input type="text" name="nom" required /></label><br />
+    <label>Description: <input type="text" name="description" /></label><br />
+    <button type="submit">Ajouter filière</button>
+  </form>
+
+  <h2>Ajouter une spécialité</h2>
+  <form id="formSpecialite" method="POST" action="/api/specialites">
+    <label>Filière:
+      <select id="filiereSelect" name="filiere_id" required></select>
+    </label><br />
+    <label>Nom spécialité: <input type="text" name="nom" required /></label><br />
+    <button type="submit">Ajouter spécialité</button>
+  </form>
+
+  <script>
+    // Charger domaines pour le select filière
+    fetch('/api/domaines')
+      .then(res => res.json())
+      .then(domaines => {
+        const domaineSelect = document.getElementById('domaineSelect');
+        domaines.forEach(d => {
+          const option = document.createElement('option');
+          option.value = d.id;
+          option.textContent = d.nom;
+          domaineSelect.appendChild(option);
+        });
+
+        if (domaines.length > 0) loadFilieres(domaines[0].id);
+      });
+
+    // Quand domaine change, charger filières correspondantes
+    document.getElementById('domaineSelect').addEventListener('change', e => {
+      loadFilieres(e.target.value);
+    });
+
+    // Charger filières dans select spécialité
+    function loadFilieres(domaineId) {
+      fetch('/api/filieres?domaine_id=' + encodeURIComponent(domaineId))
+        .then(res => res.json())
+        .then(filieres => {
+          const filiereSelect = document.getElementById('filiereSelect');
+          filiereSelect.innerHTML = '';
+          filieres.forEach(f => {
+            const option = document.createElement('option');
+            option.value = f.id;
+            option.textContent = f.nom;
+            filiereSelect.appendChild(option);
+          });
+        });
+    }
+  </script>
+</body>
+</html>
