@@ -1,124 +1,141 @@
 const express = require('express');
-const session = require('express-session');
 const sqlite3 = require('sqlite3').verbose();
+const session = require('express-session');
+const bodyParser = require('body-parser');
 const path = require('path');
-const bcrypt = require('bcrypt');
 
 const app = express();
-const db = new sqlite3.Database('./data/filieres.db');
+const db = new sqlite3.Database('robot.db');
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 app.use(session({
-  secret: 'supersecret',
+  secret: 'robot_secret',
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false
 }));
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Page login
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.use(express.static('public'));
 
-// Connexion
-app.post('/login', (req, res) => {
-  const { login, password } = req.body;
-
-  db.get('SELECT * FROM users WHERE login = ?', [login], async (err, user) => {
-    if (err || !user) return res.status(401).send('Identifiants invalides');
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(403).send('Mot de passe incorrect');
-
-    req.session.user = user;
-    if (user.role === 'admin') res.redirect('/admin.html');
-    else res.redirect('/ecole.html');
-  });
-});
-
-// Middleware auth
 function requireLogin(req, res, next) {
-  if (!req.session.user) return res.status(401).send('Non autorisé');
+  if (!req.session.user) return res.status(401).json({ error: 'Non autorisé' });
   next();
 }
 
-// ADMIN: Créer école
-app.post('/create-ecole', requireLogin, (req, res) => {
-  if (req.session.user.role !== 'admin') return res.status(403).send('Interdit');
-  const { nom, login, password, adresse } = req.body;
-  bcrypt.hash(password, 10).then(hash => {
-    db.run(
-      'INSERT INTO users (nom, login, password, role, adresse) VALUES (?, ?, ?, ?, ?)',
-      [nom, login, hash, 'ecole', adresse],
-      (err) => {
-        if (err) return res.status(500).send('Erreur DB');
-        res.redirect('/admin.html');
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+
+  db.get(`SELECT * FROM Admin WHERE login = ? AND password = ?`, [username, password], (err, admin) => {
+    if (admin) {
+      req.session.user = { type: 'admin', id: admin.id };
+      return res.json({ redirect: '/admin.html' });
+    }
+    db.get(`SELECT * FROM Ecole WHERE login = ? AND password = ?`, [username, password], (err, ecole) => {
+      if (ecole) {
+        req.session.user = { type: 'ecole', id: ecole.id };
+        return res.json({ redirect: '/ecole.html' });
       }
-    );
+      res.status(401).json({ error: 'Identifiants incorrects' });
+    });
   });
 });
 
-// DOMAINES
-app.get('/api/domaines', requireLogin, (req, res) => {
-  db.all('SELECT * FROM domaines', (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+// CRUD Écoles (admin)
+app.get('/ecoles', requireLogin, (req, res) => {
+  if (req.session.user.type !== 'admin') return res.sendStatus(403);
+  db.all(`SELECT * FROM Ecole`, [], (err, rows) => res.json(rows));
+});
+
+app.post('/ecoles', requireLogin, (req, res) => {
+  if (req.session.user.type !== 'admin') return res.sendStatus(403);
+  const { nom, login, password } = req.body;
+  db.run(`INSERT INTO Ecole (nom, login, password) VALUES (?, ?, ?)`, [nom, login, password], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.status(201).json({ id: this.lastID });
   });
 });
 
-app.post('/api/domaines', requireLogin, (req, res) => {
-  if (req.session.user.role !== 'admin') return res.status(403).send('Interdit');
-  const { nom } = req.body;
-  db.run('INSERT INTO domaines (nom) VALUES (?)', [nom], err => {
-    if (err) return res.status(500).send('Erreur DB');
-    res.redirect('/admin.html');
+app.delete('/ecoles/:id', requireLogin, (req, res) => {
+  if (req.session.user.type !== 'admin') return res.sendStatus(403);
+  db.run(`DELETE FROM Ecole WHERE id = ?`, [req.params.id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
-// FILIERES
-app.get('/api/filieres', requireLogin, (req, res) => {
-  const domaine_id = req.query.domaine_id;
-  let sql = 'SELECT * FROM filieres';
-  const params = [];
+// Domaines
+app.get('/domaines', requireLogin, (req, res) => {
+  const ecoleId = req.session.user.type === 'admin' && req.query.ecole_id
+    ? req.query.ecole_id
+    : req.session.user.id;
 
-  if (domaine_id) {
-    sql += ' WHERE domaine_id = ?';
-    params.push(domaine_id);
-  }
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+  db.all(`SELECT * FROM Domaine WHERE ecole_id = ?`, [ecoleId], (err, rows) => res.json(rows));
+});
+
+app.post('/domaines', requireLogin, (req, res) => {
+  const { nom, ecole_id, couleur } = req.body;
+  const colorValue = couleur || '#3498db';
+  const sql = `INSERT INTO Domaine (nom, ecole_id, couleur) VALUES (?, ?, ?)`;
+  db.run(sql, [nom, ecole_id, colorValue], function(err) {
+    if (err) {
+      res.status(400).json({ error: err.message });
+      return;
+    }
+    res.json({ id: this.lastID });
   });
 });
 
-app.post('/api/filieres', requireLogin, (req, res) => {
-  const { nom, description, domaine_id } = req.body;
-  db.run('INSERT INTO filieres (nom, description, domaine_id) VALUES (?, ?, ?)', [nom, description, domaine_id], err => {
-    if (err) return res.status(500).send('Erreur DB');
-    res.redirect('/ecole.html');
+app.delete('/domaines/:id', requireLogin, (req, res) => {
+  db.run(`DELETE FROM Domaine WHERE id = ?`, [req.params.id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ success: true });
   });
 });
 
-// SPECIALITES
-app.get('/api/specialites', requireLogin, (req, res) => {
-  const filiere_id = req.query.filiere_id;
-  let sql = 'SELECT * FROM specialites';
-  const params = [];
+// Filières
+app.get('/filieres/:domaine_id', requireLogin, (req, res) => {
+  db.all(`SELECT * FROM Filiere WHERE domaine_id = ?`, [req.params.domaine_id], (err, rows) => res.json(rows));
+});
 
-  if (filiere_id) {
-    sql += ' WHERE filiere_id = ?';
-    params.push(filiere_id);
-  }
-  db.all(sql, params, (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json(rows);
+app.post('/filieres', requireLogin, (req, res) => {
+  const { nom, domaine_id } = req.body;
+  db.run(`INSERT INTO Filiere (nom, domaine_id) VALUES (?, ?)`, [nom, domaine_id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.status(201).json({ id: this.lastID });
   });
 });
 
-app.post('/api/specialites', requireLogin, (req, res) => {
+app.delete('/filieres/:id', requireLogin, (req, res) => {
+  db.run(`DELETE FROM Filiere WHERE id = ?`, [req.params.id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+// Spécialités
+app.get('/specialites/:filiere_id', requireLogin, (req, res) => {
+  db.all(`SELECT * FROM Specialite WHERE filiere_id = ?`, [req.params.filiere_id], (err, rows) => res.json(rows));
+});
+
+app.post('/specialites', requireLogin, (req, res) => {
   const { nom, filiere_id } = req.body;
-  db.run('INSERT INTO specialites (nom, filiere_id) VALUES (?, ?)', [nom, filiere_id], err => {
-    if (err) return res.status(500).send('Erreur DB');
-    res.redirect('/ecole.html');
+  db.run(`INSERT INTO Specialite (nom, filiere_id) VALUES (?, ?)`, [nom, filiere_id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.status(201).json({ id: this.lastID });
   });
 });
 
-app.listen(3000, () => console.log('Serveur sur http://localhost:3000'));
+app.delete('/specialites/:id', requireLogin, (req, res) => {
+  db.run(`DELETE FROM Specialite WHERE id = ?`, [req.params.id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ success: true });
+  });
+});
+
+
+
+// Serveur
+app.listen(3000, () => {
+  console.log('Serveur démarré sur http://localhost:3000');
+});
