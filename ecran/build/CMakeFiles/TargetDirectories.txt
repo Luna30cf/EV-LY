@@ -1,6 +1,0 @@
-C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/CMakeFiles/main.dir
-C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/CMakeFiles/edit_cache.dir
-C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/CMakeFiles/rebuild_cache.dir
-C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/lvgl/CMakeFiles/lvgl.dir
-C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/lvgl/CMakeFiles/edit_cache.dir
-C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/lvgl/CMakeFiles/rebuild_cache.dir
