@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/cmake_install.cmake",
+		"C:/Users/7luna/Documents/YnovB2/EV-LY/ecran/build/lvgl/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

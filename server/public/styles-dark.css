@@ -1,0 +1,35 @@
+/* styles-dark.css – Thème sombre */
+
+:root {
+  --primary: #2980b9;
+  --secondary: #27ae60;
+  --bg: #2c3e50;
+  --text: #ecf0f1;
+  --border: #34495e;
+  --input-bg: #34495e;
+  --card-bg: #3b4a59;
+  --row-bg: #34495e;
+  --link: #1abc9c;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  margin: 0;
+  font-family: sans-serif;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Forcer les champs de saisie en fond sombre */
+input, textarea {
+  background-color: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}

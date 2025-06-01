@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <link rel="stylesheet" href="styles.css" />
+
+  <title>Gestion École par Admin</title>
+</head>
+<body>
+  <h1>Gestion de l'école par Admin</h1>
+
+  <h2>Ajouter un Domaine</h2>
+  <form id="addDomaineForm">
+    <input type="text" name="nom" placeholder="Nom du domaine" required>
+    <input type="color" name="couleur" value="#3498db" title="Choisir une couleur">
+    <button type="submit">Ajouter domaine</button>
+  </form>
+
+  <ul id="domaineList"></ul>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const ecoleId = params.get('ecole_id');
+    const isAdmin = params.get('admin') === '1';
+
+    const domaineList = document.getElementById('domaineList');
+
+    function loadDomaines() {
+      fetch(`/domaines${isAdmin ? '?ecole_id=' + ecoleId : ''}`)
+        .then(res => res.json())
+        .then(domaines => {
+          domaineList.innerHTML = '';
+          domaines.forEach(d => {
+            const li = document.createElement('li');
+
+            // Applique la couleur de fond
+            li.style.backgroundColor = d.couleur || '#3498db';
+            li.style.padding = '10px';
+            li.style.borderRadius = '8px';
+            li.style.marginBottom = '10px';
+            li.style.listStyle = 'none';
+
+            li.innerHTML = `
+              <strong>${d.nom}</strong>
+              <button onclick="deleteDomaine(${d.id})">Supprimer</button>
+              <ul id="filiereList-${d.id}"></ul>
+              <form onsubmit="addFiliere(event, ${d.id})">
+                <input type="text" name="nom" placeholder="Nom de la filière" required>
+                <button type="submit">Ajouter</button>
+              </form>
+            `;
+            domaineList.appendChild(li);
+            loadFilieres(d.id);
+          });
+        });
+    }
+
+    function loadFilieres(domaineId) {
+      fetch(`/filieres/${domaineId}`)
+        .then(res => res.json())
+        .then(filieres => {
+          const ul = document.getElementById(`filiereList-${domaineId}`);
+          ul.innerHTML = '';
+          filieres.forEach(f => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              ${f.nom}
+              <button onclick="deleteFiliere(${f.id}, ${domaineId})">Supprimer</button>
+              <ul id="specialiteList-${f.id}"></ul>
+              <form onsubmit="addSpecialite(event, ${f.id})">
+                <input type="text" name="nom" placeholder="Spécialité" required>
+                <button type="submit">Ajouter</button>
+              </form>
+            `;
+            ul.appendChild(li);
+            loadSpecialites(f.id);
+          });
+        });
+    }
+
+    function loadSpecialites(filiereId) {
+      fetch(`/specialites/${filiereId}`)
+        .then(res => res.json())
+        .then(specialites => {
+          const ul = document.getElementById(`specialiteList-${filiereId}`);
+          ul.innerHTML = '';
+          specialites.forEach(s => {
+            const li = document.createElement('li');
+            li.innerHTML = `
+              ${s.nom}
+              <button onclick="deleteSpecialite(${s.id}, ${filiereId})">Supprimer</button>
+            `;
+            ul.appendChild(li);
+          });
+        });
+    }
+
+    document.getElementById('addDomaineForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const data = { 
+        nom: form.get('nom'),
+        couleur: form.get('couleur') || '#3498db'
+      };
+      if (isAdmin) data.ecole_id = ecoleId;
+
+      fetch('/domaines', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(() => {
+        e.target.reset();
+        loadDomaines();
+      });
+    });
+
+    function addFiliere(e, domaineId) {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const data = { nom: form.get('nom'), domaine_id: domaineId };
+      fetch('/filieres', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(() => {
+        e.target.reset();
+        loadFilieres(domaineId);
+      });
+    }
+
+    function addSpecialite(e, filiereId) {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      const data = { nom: form.get('nom'), filiere_id: filiereId };
+      fetch('/specialites', {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(() => {
+        e.target.reset();
+        loadSpecialites(filiereId);
+      });
+    }
+
+    function deleteDomaine(id) {
+      if (confirm("Supprimer ce domaine ?")) {
+        fetch(`/domaines/${id}`, { method: 'DELETE' })
+          .then(() => loadDomaines());
+      }
+    }
+
+    // Ajout domaineId pour recharger la bonne liste filières
+    function deleteFiliere(id, domaineId) {
+      if (confirm("Supprimer cette filière ?")) {
+        fetch(`/filieres/${id}`, { method: 'DELETE' })
+          .then(() => loadFilieres(domaineId));
+      }
+    }
+
+    // Ajout filiereId pour recharger la bonne liste spécialités
+    function deleteSpecialite(id, filiereId) {
+      if (confirm("Supprimer cette spécialité ?")) {
+        fetch(`/specialites/${id}`, { method: 'DELETE' })
+          .then(() => loadSpecialites(filiereId));
+      }
+    }
+
+    loadDomaines();
+  </script>
+</body>
+</html>

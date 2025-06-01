@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>EV-LY – Gestion des Filières</title>
+  <link id="themeStylesheet" href="/styles.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; font-family: sans-serif; background-color: var(--bg); color: var(--text); }
+    header {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { margin: 0; font-size: 1.5rem; }
+    #toggleThemeBtn { cursor: pointer; font-size: 1.2rem; }
+    #backDashboard { color: #fff; text-decoration: none; margin-left: 1rem; }
+    #formSection, #listSection {
+      margin: 1rem;
+      background-color: var(--card-bg);
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    label, select, input {
+      display: block;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background-color: var(--input-bg);
+      color: var(--text);
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.6rem;
+      background-color: var(--primary);
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 0.8rem; border: 1px solid var(--border); text-align: left; }
+    th { background-color: var(--secondary); color: #fff; }
+    tr:nth-child(even) { background-color: var(--row-bg); }
+    .btnDelete {
+      padding: 0.3rem 0.6rem;
+      background-color: #e74c3c;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <a href="/dashboard/cards" id="backDashboard">◀ Retour Dashboard</a>
+      &nbsp;&nbsp;<span>Gestion des Filières</span>
+    </div>
+    <div>
+      <span id="toggleThemeBtn" onclick="toggleTheme()">🌓</span>
+      &nbsp;|&nbsp;
+      <a href="/logout" style="color: #fff; text-decoration: none;">Déconnexion</a>
+    </div>
+  </header>
+
+  <section id="formSection">
+    <h2>Créer une Filière</h2>
+    <div id="errorMsg"></div>
+    <form id="formCreateFiliere">
+      <label for="domaineSelect">Sélectionner le Domaine :</label>
+      <select id="domaineSelect" name="domaine_id" required>
+        <option value="">-- Choisir Domaine --</option>
+      </select>
+
+      <label for="nom">Nom de la Filière :</label>
+      <input type="text" id="nom" name="nom" required />
+
+      <label for="description">Description :</label>
+      <input type="text" id="description" name="description" />
+
+      <button type="submit">Créer Filière</button>
+    </form>
+  </section>
+
+  <section id="listSection">
+    <h2>Liste des Filières</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Domaine</th>
+          <th>Nom</th>
+          <th>Description</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </section>
+
+  <script>
+    function toggleTheme() {
+      const themeLink = document.getElementById('themeStylesheet');
+      themeLink.setAttribute(
+        'href',
+        themeLink.getAttribute('href') === '/styles.css'
+          ? '/styles-dark.css'
+          : '/styles.css'
+      );
+    }
+
+    // Récupérer et remplir le <select> des Domaines
+    async function loadDomainesIntoSelect() {
+      try {
+        const res = await fetch('/domaines');
+        const domaines = await res.json();
+        const select = document.getElementById('domaineSelect');
+        domaines.forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.id;
+          opt.textContent = d.nom;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Charger toutes les Filières (avec leur nom de Domaine)
+    async function loadFilieres() {
+      try {
+        // Récupérer d’abord liste des Domaines
+        const resD = await fetch('/domaines');
+        const domaines = await resD.json();
+        const mapDomaine = {};
+        domaines.forEach(d => { mapDomaine[d.id] = d.nom; });
+
+        // Récupérer ensuite les filières
+        const resF = await fetch('/filieres');
+        const filieres = await resF.json();
+        const tbody = document.getElementById('listBody');
+        tbody.innerHTML = '';
+
+        filieres.forEach(f => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${f.id}</td>
+            <td>${mapDomaine[f.domaine_id] || '-'}</td>
+            <td>${f.nom}</td>
+            <td>${f.description || '-'}</td>
+            <td><button data-id="${f.id}" class="btnDelete">Supprimer</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Associer la suppression
+        document.querySelectorAll('.btnDelete').forEach(btn => {
+          btn.addEventListener('click', async e => {
+            const id = e.target.getAttribute('data-id');
+            try {
+              const resp = await fetch(`/filieres/${id}`, { method: 'DELETE' });
+              const data = await resp.json();
+              if (data.success) loadFilieres();
+              else alert(data.error || 'Erreur suppression');
+            } catch (err) {
+              console.error(err);
+            }
+          });
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Soumission formulaire création
+    document.getElementById('formCreateFiliere').addEventListener('submit', async e => {
+      e.preventDefault();
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = '';
+
+      const domaine_id = document.getElementById('domaineSelect').value;
+      const nom        = document.getElementById('nom').value.trim();
+      const description = document.getElementById('description').value.trim();
+
+      if (!domaine_id || !nom) {
+        errorDiv.textContent = 'Domaine et nom sont obligatoires.';
+        return;
+      }
+
+      const payload = { nom, description, domaine_id, custom_fields: '{}' };
+      try {
+        const res = await fetch('/filieres', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('nom').value = '';
+          document.getElementById('description').value = '';
+          loadFilieres();
+        } else {
+          errorDiv.textContent = data.error || 'Erreur création';
+        }
+      } catch (err) {
+        console.error(err);
+        errorDiv.textContent = 'Erreur réseau';
+      }
+    });
+
+    // Au chargement
+    window.addEventListener('DOMContentLoaded', () => {
+      loadDomainesIntoSelect();
+      loadFilieres();
+    });
+  </script>
+</body>
+</html>

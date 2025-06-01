@@ -1,8 +1,20 @@
 {
+  "name": "ev-ly",
+  "version": "1.0.0",
+  "description": "Serveur Express + MQTT + LVGL integration for EV-LY",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "initdb": "node init_db.js"
+  },
+  "keywords": [],
+  "author": "Vous",
+  "license": "ISC",
   "dependencies": {
-    "body-parser": "^2.2.0",
-    "express": "^5.1.0",
-    "express-session": "^1.18.1",
-    "sqlite3": "^5.1.7"
+    "body-parser": "^1.20.2",
+    "express": "^4.18.2",
+    "express-session": "^1.17.3",
+    "mqtt": "^4.3.7",
+    "sqlite3": "^5.1.6"
   }
 }

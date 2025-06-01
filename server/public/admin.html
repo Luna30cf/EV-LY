@@ -2,54 +2,73 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Panel Admin</title>
-  <link rel="stylesheet" href="styles.css" />
-
+  <title>EV-LY – Administration</title>
+  <link id="themeStylesheet" href="/styles.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    #toggleThemeBtn {
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    #backDashboard {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 1rem;
+      font-size: 0.9rem;
+    }
+    main {
+      padding: 1rem;
+    }
+    // Style minimal : à adapter selon vos besoins
+  </style>
 </head>
 <body>
-  <h1>Panel Administrateur</h1>
-
-  <h2>Créer une École</h2>
-  <form id="createEcoleForm">
-    <input type="text" name="nom" placeholder="Nom de l'école" required>
-    <input type="text" name="login" placeholder="Identifiant" required>
-    <input type="password" name="password" placeholder="Mot de passe" required>
-    <button type="submit">Créer</button>
-  </form>
-
-  <h2>Liste des Écoles</h2>
-  <ul id="ecoleList"></ul>
+  <header>
+    <div>
+      <a href="/dashboard/cards" id="backDashboard">◀ Retour Dashboard</a>
+      &nbsp;&nbsp;<span>Administration</span>
+    </div>
+    <div>
+      <span id="toggleThemeBtn" onclick="toggleTheme()"></span>
+      &nbsp;|&nbsp;
+      <a href="/logout" style="color: #fff; text-decoration: none;">Déconnexion</a>
+    </div>
+  </header>
+  <main>
+    <h2>Page d’administration</h2>
+    <p>Cet écran est prévu pour gérer les :</p>
+    <ul>
+      <li>Comptes Admin</li>
+      <li>Paramètres globaux</li>
+      <li>…</li>
+    </ul>
+    <p>À compléter selon vos besoins.</p>
+  </main>
 
   <script>
-    fetch('/ecoles')
-      .then(res => res.json())
-      .then(data => {
-        const list = document.getElementById('ecoleList');
-        data.forEach(e => {
-          const li = document.createElement('li');
-          li.innerHTML = `
-            ${e.nom} (${e.login})
-            <button onclick="deleteEcole(${e.id})">Supprimer</button>
-            <a href="ecole.html?admin=1&ecole_id=${e.id}">Gérer</a>
-          `;
-          list.appendChild(li);
-        });
-      });
-
-    document.getElementById('createEcoleForm').addEventListener('submit', (e) => {
-      e.preventDefault();
-      const form = new FormData(e.target);
-      fetch('/ecoles', {
-        method: 'POST',
-        body: JSON.stringify(Object.fromEntries(form)),
-        headers: { 'Content-Type': 'application/json' }
-      }).then(() => location.reload());
-    });
-
-    function deleteEcole(id) {
-      if (confirm("Supprimer cette école ?")) {
-        fetch(`/ecoles/${id}`, { method: 'DELETE' })
-          .then(() => location.reload());
+    function toggleTheme() {
+      const themeLink = document.getElementById('themeStylesheet');
+      if (themeLink.getAttribute('href') === '/styles.css') {
+        themeLink.setAttribute('href', '/styles-dark.css');
+      } else {
+        themeLink.setAttribute('href', '/styles.css');
       }
     }
   </script>
