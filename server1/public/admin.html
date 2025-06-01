@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Panel Admin</title>
+  <link rel="stylesheet" href="styles.css" />
+
+</head>
+<body>
+  <h1>Panel Administrateur</h1>
+
+  <h2>Créer une École</h2>
+  <form id="createEcoleForm">
+    <input type="text" name="nom" placeholder="Nom de l'école" required>
+    <input type="text" name="login" placeholder="Identifiant" required>
+    <input type="password" name="password" placeholder="Mot de passe" required>
+    <button type="submit">Créer</button>
+  </form>
+
+  <h2>Liste des Écoles</h2>
+  <ul id="ecoleList"></ul>
+
+  <script>
+    fetch('/ecoles')
+      .then(res => res.json())
+      .then(data => {
+        const list = document.getElementById('ecoleList');
+        data.forEach(e => {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            ${e.nom} (${e.login})
+            <button onclick="deleteEcole(${e.id})">Supprimer</button>
+            <a href="ecole.html?admin=1&ecole_id=${e.id}">Gérer</a>
+          `;
+          list.appendChild(li);
+        });
+      });
+
+    document.getElementById('createEcoleForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const form = new FormData(e.target);
+      fetch('/ecoles', {
+        method: 'POST',
+        body: JSON.stringify(Object.fromEntries(form)),
+        headers: { 'Content-Type': 'application/json' }
+      }).then(() => location.reload());
+    });
+
+    function deleteEcole(id) {
+      if (confirm("Supprimer cette école ?")) {
+        fetch(`/ecoles/${id}`, { method: 'DELETE' })
+          .then(() => location.reload());
+      }
+    }
+  </script>
+</body>
+</html>

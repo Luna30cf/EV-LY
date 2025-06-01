@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dashboard École - Lecture seule</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    background: #f0f2f5;
+  }
+  h1 {
+    text-align: center;
+    color: #34495e;
+  }
+  #breadcrumb {
+    margin-bottom: 20px;
+    font-size: 1em;
+    color: #555;
+  }
+  #breadcrumb span {
+    color: #3498db;
+    text-decoration: underline;
+    margin-right: 5px;
+    cursor: pointer;
+  }
+  #breadcrumb span:not(:last-child)::after {
+    content: '>';
+    margin-left: 5px;
+    color: #999;
+  }
+  #container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    justify-content: center;
+  }
+  .card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
+    padding: 20px;
+    min-width: 160px;
+    max-width: 200px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s ease-in-out;
+  }
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgb(0 0 0 / 0.15);
+  }
+  .color-indicator {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 0 auto 10px;
+  }
+</style>
+</head>
+<body>
+  <h1>Dashboard École</h1>
+
+  <div id="breadcrumb"></div>
+  <div id="container"></div>
+
+  <script>
+    let currentDomaine = null;
+    let currentFiliere = null;
+
+    const container = document.getElementById('container');
+    const breadcrumb = document.getElementById('breadcrumb');
+
+    function renderBreadcrumb() {
+      const parts = [];
+      parts.push(`<span onclick="goToDomaines()">Domaines</span>`);
+
+      if (currentDomaine) {
+        parts.push(`<span onclick="goToFilieres(${currentDomaine.id})">${currentDomaine.nom}</span>`);
+      }
+      if (currentFiliere) {
+        parts.push(`<span onclick="goToSpecialites(${currentFiliere.id})">${currentFiliere.nom}</span>`);
+      }
+      breadcrumb.innerHTML = parts.join(' ');
+    }
+
+    function goToDomaines() {
+      currentDomaine = null;
+      currentFiliere = null;
+      renderBreadcrumb();
+      fetch('/domaines')
+        .then(res => res.json())
+        .then(domaines => {
+          container.innerHTML = '';
+          domaines.forEach(d => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+              <div class="color-indicator" style="background-color:${d.couleur || '#3498db'};"></div>
+              <strong>${d.nom}</strong>
+            `;
+            card.onclick = () => {
+              currentDomaine = d;
+              goToFilieres(d.id);
+            };
+            container.appendChild(card);
+          });
+        });
+    }
+
+    function goToFilieres(domaineId) {
+      currentFiliere = null;
+      renderBreadcrumb();
+      fetch(`/filieres/${domaineId}`)
+        .then(res => res.json())
+        .then(filieres => {
+          container.innerHTML = '';
+          filieres.forEach(f => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.textContent = f.nom;
+            card.onclick = () => {
+              currentFiliere = f;
+              goToSpecialites(f.id);
+            };
+            container.appendChild(card);
+          });
+        });
+    }
+
+    function goToSpecialites(filiereId) {
+      renderBreadcrumb();
+      fetch(`/specialites/${filiereId}`)
+        .then(res => res.json())
+        .then(specialites => {
+          container.innerHTML = '';
+          specialites.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.textContent = s.nom;
+            container.appendChild(card);
+          });
+        });
+    }
+
+    goToDomaines();
+  </script>
+</body>
+</html>

@@ -1,39 +1,126 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Connexion</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8" />
+  <title>EV-LY – Connexion</title>
+  <link id="themeStylesheet" href="/styles.css" rel="stylesheet" />
+  <style>
+    /* Quelques styles inline pour centrer le formulaire */
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: sans-serif;
+    }
+    #loginBox {
+      background-color: var(--bg);
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      width: 300px;
+    }
+    #loginBox h2 {
+      text-align: center;
+      margin-bottom: 1rem;
+      color: var(--text);
+    }
+    #loginBox label {
+      display: block;
+      margin-top: 0.5rem;
+      color: var(--text);
+    }
+    #loginBox input {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.3rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      box-sizing: border-box;
+      background-color: var(--input-bg);
+      color: var(--text);
+    }
+    #loginBox button {
+      width: 100%;
+      padding: 0.6rem;
+      margin-top: 1rem;
+      background-color: var(--primary);
+      border: none;
+      color: #fff;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #toggleThemeBtn {
+      margin-top: 1rem;
+      text-align: center;
+      cursor: pointer;
+      color: var(--text);
+    }
+    #errorMsg {
+      color: #e74c3c;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+  </style>
 </head>
-<body class="container py-5">
-  <h2>Connexion</h2>
-  <form id="loginForm">
-    <div class="mb-3">
-      <label>Nom d'utilisateur</label>
-      <input type="text" name="username" class="form-control" required>
-    </div>
-    <div class="mb-3">
-      <label>Mot de passe</label>
-      
-      <input type="password" name="password" class="form-control" required>
-    </div>
-    <button class="btn btn-primary">Se connecter</button>
-  </form>
-  <div id="error" class="text-danger mt-3"></div>
+<body>
+  <div id="loginBox">
+    <h2>Connexion EV-LY</h2>
+    <div id="errorMsg"></div>
+    <form id="loginForm">
+      <label for="login">Identifiant :</label>
+      <input type="text" id="login" name="login" required />
+
+      <label for="password">Mot de passe :</label>
+      <input type="password" id="password" name="password" required />
+
+      <button type="submit">Se connecter</button>
+    </form>
+    <div id="toggleThemeBtn" onclick="toggleTheme()">🌓 Mode sombre / clair</div>
+  </div>
 
   <script>
+    // Fonction de bascule clair/sombre
+    function toggleTheme() {
+      const themeLink = document.getElementById('themeStylesheet');
+      if (themeLink.getAttribute('href') === '/styles.css') {
+        themeLink.setAttribute('href', '/styles-dark.css');
+      } else {
+        themeLink.setAttribute('href', '/styles.css');
+      }
+    }
+
+    // Gestion du formulaire de login via fetch
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const formData = new FormData(e.target);
-      const data = Object.fromEntries(formData);
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      const result = await res.json();
-      if (res.ok) window.location.href = result.redirect;
-      else document.getElementById('error').textContent = result.error;
+      const login = document.getElementById('login').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = '';
+
+      if (!login || !password) {
+        errorDiv.textContent = 'Tous les champs sont requis.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ login, password })
+        });
+        const data = await res.json();
+        if (data.success) {
+          window.location.href = data.redirect; // /dashboard
+        } else {
+          errorDiv.textContent = data.error || 'Erreur inconnue';
+        }
+      } catch (err) {
+        errorDiv.textContent = 'Erreur réseau.';
+        console.error(err);
+      }
     });
   </script>
 </body>

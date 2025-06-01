@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>EV-LY – Gestion des Domaines</title>
+  <link id="themeStylesheet" href="/styles.css" rel="stylesheet" />
+  <style>
+    body { margin: 0; font-family: sans-serif; background-color: var(--bg); color: var(--text); }
+    header {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { margin: 0; font-size: 1.5rem; }
+    #toggleThemeBtn { cursor: pointer; font-size: 1.2rem; }
+    #backDashboard { color: #fff; text-decoration: none; margin-left: 1rem; }
+    #formSection, #listSection {
+      margin: 1rem;
+      background-color: var(--card-bg);
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+   label, select, input {
+      display: block;
+      width: 100%;
+      margin-top: 0.5rem;
+      padding: 0.4rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background-color: var(--input-bg);
+      color: var(--text);
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1rem;
+      padding: 0.6rem;
+      background-color: var(--primary);
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { padding: 0.8rem; border: 1px solid var(--border); text-align: left; }
+    th { background-color: var(--secondary); color: #fff; }
+    tr:nth-child(even) { background-color: var(--row-bg); }
+    .btnDelete {
+      padding: 0.3rem 0.6rem;
+      background-color: #e74c3c;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <a href="/dashboard/cards" id="backDashboard">◀ Retour Dashboard</a>
+      &nbsp;&nbsp;<span>Gestion des Domaines</span>
+    </div>
+    <div>
+      <span id="toggleThemeBtn" onclick="toggleTheme()">🌓</span>
+      &nbsp;|&nbsp;
+      <a href="/logout" style="color: #fff; text-decoration: none;">Déconnexion</a>
+    </div>
+  </header>
+
+  <section id="formSection">
+    <h2>Créer un Domaine</h2>
+    <div id="errorMsg"></div>
+    <form id="formCreateDomaine">
+      <label for="ecoleSelect">Sélectionner l’École :</label>
+      <select id="ecoleSelect" name="ecole_id" required>
+        <option value="">-- Choisir École --</option>
+      </select>
+
+      <label for="nom">Nom du Domaine :</label>
+      <input type="text" id="nom" name="nom" required />
+
+      <label for="couleur">Couleur (hex) :</label>
+      <input type="text" id="couleur" name="couleur" placeholder="#3498db" />
+
+      <label for="description">Description :</label>
+      <input type="text" id="description" name="description" />
+
+      <button type="submit">Créer Domaine</button>
+    </form>
+  </section>
+
+  <section id="listSection">
+    <h2>Liste des Domaines</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>École</th>
+          <th>Nom</th>
+          <th>Couleur</th>
+          <th>Description</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </section>
+
+  <script>
+    function toggleTheme() {
+      const themeLink = document.getElementById('themeStylesheet');
+      themeLink.setAttribute(
+        'href',
+        themeLink.getAttribute('href') === '/styles.css'
+          ? '/styles-dark.css'
+          : '/styles.css'
+      );
+    }
+
+    // Récupérer et remplir le <select> des Écoles
+    async function loadEcolesIntoSelect() {
+      try {
+        const res = await fetch('/ecoles');
+        const ecoles = await res.json();
+        const select = document.getElementById('ecoleSelect');
+        ecoles.forEach(e => {
+          const opt = document.createElement('option');
+          opt.value = e.id;
+          opt.textContent = e.nom;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Charger tous les Domaines (avec leur nom d’École)
+    async function loadDomaines() {
+      try {
+        // On récupère d’abord la liste des Écoles pour associer à chaque domaine
+        const resE = await fetch('/ecoles');
+        const ecoles = await resE.json();
+        const mapEcoles = {};
+        ecoles.forEach(e => { mapEcoles[e.id] = e.nom; });
+
+        // On charge ensuite les domaines
+        const resD = await fetch('/domaines');
+        const domaines = await resD.json();
+        const tbody = document.getElementById('listBody');
+        tbody.innerHTML = '';
+
+        domaines.forEach(d => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${d.id}</td>
+            <td>${mapEcoles[d.ecole_id] || '-'}</td>
+            <td>${d.nom}</td>
+            <td><span style="background:${d.couleur};padding:0.2rem 0.5rem;border-radius:4px;color:#fff;">${d.couleur}</span></td>
+            <td>${d.description || '-'}</td>
+            <td><button data-id="${d.id}" class="btnDelete">Supprimer</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        // Associer la suppression
+        document.querySelectorAll('.btnDelete').forEach(btn => {
+          btn.addEventListener('click', async e => {
+            const id = e.target.getAttribute('data-id');
+            try {
+              const resp = await fetch(`/domaines/${id}`, { method: 'DELETE' });
+              const data = await resp.json();
+              if (data.success) loadDomaines();
+              else alert(data.error || 'Erreur suppression');
+            } catch (err) {
+              console.error(err);
+            }
+          });
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    // Soumission du formulaire de création
+    document.getElementById('formCreateDomaine').addEventListener('submit', async e => {
+      e.preventDefault();
+      const errorDiv = document.getElementById('errorMsg');
+      errorDiv.textContent = '';
+
+      const ecole_id = document.getElementById('ecoleSelect').value;
+      const nom       = document.getElementById('nom').value.trim();
+      const couleur   = document.getElementById('couleur').value.trim() || '#3498db';
+      const description = document.getElementById('description').value.trim();
+
+      if (!ecole_id || !nom) {
+        errorDiv.textContent = 'École et nom sont obligatoires.';
+        return;
+      }
+
+      const payload = { nom, couleur, description, ecole_id, custom_fields: '{}' };
+      try {
+        const res = await fetch('/domaines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          // Réinitialiser le formulaire
+          document.getElementById('nom').value = '';
+          document.getElementById('couleur').value = '#3498db';
+          document.getElementById('description').value = '';
+          loadDomaines();
+        } else {
+          errorDiv.textContent = data.error || 'Erreur création';
+        }
+      } catch (err) {
+        console.error(err);
+        errorDiv.textContent = 'Erreur réseau';
+      }
+    });
+
+    // Au chargement
+    window.addEventListener('DOMContentLoaded', () => {
+      loadEcolesIntoSelect();
+      loadDomaines();
+    });
+  </script>
+</body>
+</html>

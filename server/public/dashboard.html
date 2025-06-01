@@ -1,152 +1,223 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Dashboard École - Lecture seule</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    max-width: 900px;
-    margin: 40px auto;
-    padding: 0 20px;
-    background: #f0f2f5;
-  }
-  h1 {
-    text-align: center;
-    color: #34495e;
-  }
-  #breadcrumb {
-    margin-bottom: 20px;
-    font-size: 1em;
-    color: #555;
-  }
-  #breadcrumb span {
-    color: #3498db;
-    text-decoration: underline;
-    margin-right: 5px;
-    cursor: pointer;
-  }
-  #breadcrumb span:not(:last-child)::after {
-    content: '>';
-    margin-left: 5px;
-    color: #999;
-  }
-  #container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
-    justify-content: center;
-  }
-  .card {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgb(0 0 0 / 0.1);
-    padding: 20px;
-    min-width: 160px;
-    max-width: 200px;
-    text-align: center;
-    cursor: pointer;
-    transition: transform 0.15s ease-in-out;
-  }
-  .card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 6px 12px rgb(0 0 0 / 0.15);
-  }
-  .color-indicator {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin: 0 auto 10px;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>EV-LY – Dashboard</title>
+  <link id="themeStylesheet" href="/styles.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    #toggleThemeBtn {
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    nav {
+      margin: 1rem;
+    }
+    nav a {
+      margin-right: 1rem;
+      color: var(--link);
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    #viewSwitch {
+      margin: 1rem;
+    }
+    #viewSwitch button {
+      margin-right: 0.5rem;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background-color: var(--secondary);
+      color: #fff;
+    }
+    #viewSwitch button.active {
+      background-color: var(--primary);
+    }
+    #content {
+      margin: 1rem;
+    }
+
+    /* Styles “cartes” */
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      width: calc(33% - 2rem);
+      box-sizing: border-box;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-top: 0;
+      color: var(--text);
+    }
+    .card p {
+      margin: 0.3rem 0;
+      color: var(--text);
+    }
+
+    /* Styles “liste” */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.8rem;
+      border: 1px solid var(--border);
+      text-align: left;
+      color: var(--text);
+    }
+    th {
+      background-color: var(--secondary);
+      color: #fff;
+    }
+    tr:nth-child(even) {
+      background-color: var(--row-bg);
+    }
+  </style>
 </head>
 <body>
-  <h1>Dashboard École</h1>
+  <header>
+    <h1>Dashboard EV-LY</h1>
+    <div>
+      <span id="toggleThemeBtn" onclick="toggleTheme()">🌓</span>
+      &nbsp;|&nbsp;
+      <a href="/logout" style="color: #fff; text-decoration: none;">Déconnexion</a>
+    </div>
+  </header>
 
-  <div id="breadcrumb"></div>
-  <div id="container"></div>
+  <nav>
+    <!-- Liens vers les pages de gestion -->
+    <a href="/ecole.html">Gérer Écoles</a>
+    <a href="/admin.html">Admin</a>
+    <a href="/admin_gestion.html">Admin Gestion</a>
+    <!-- Vous pouvez ajouter d’autres liens (Domaines, Filières…) -->
+  </nav>
+
+  <section id="viewSwitch">
+    Affichage :
+    <button id="btnCards" class="active">Cartes</button>
+    <button id="btnList">Liste</button>
+  </section>
+
+  <section id="content">
+    <!-- Le contenu (écoles) sera injecté ici -->
+    <div id="cardsView" class="card-container"></div>
+    <table id="listView" style="display: none;">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Ville</th>
+          <th>Adresse</th>
+          <th>Téléphone</th>
+        </tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </section>
 
   <script>
-    let currentDomaine = null;
-    let currentFiliere = null;
-
-    const container = document.getElementById('container');
-    const breadcrumb = document.getElementById('breadcrumb');
-
-    function renderBreadcrumb() {
-      const parts = [];
-      parts.push(`<span onclick="goToDomaines()">Domaines</span>`);
-
-      if (currentDomaine) {
-        parts.push(`<span onclick="goToFilieres(${currentDomaine.id})">${currentDomaine.nom}</span>`);
+    // Bascule clair/sombre
+    function toggleTheme() {
+      const themeLink = document.getElementById('themeStylesheet');
+      if (themeLink.getAttribute('href') === '/styles.css') {
+        themeLink.setAttribute('href', '/styles-dark.css');
+      } else {
+        themeLink.setAttribute('href', '/styles.css');
       }
-      if (currentFiliere) {
-        parts.push(`<span onclick="goToSpecialites(${currentFiliere.id})">${currentFiliere.nom}</span>`);
+    }
+
+    // Gestion du switch “Cartes / Liste”
+    const btnCards = document.getElementById('btnCards');
+    const btnList  = document.getElementById('btnList');
+    const cardsView = document.getElementById('cardsView');
+    const listView  = document.getElementById('listView');
+    const listBody  = document.getElementById('listBody');
+
+    btnCards.addEventListener('click', () => {
+      btnCards.classList.add('active');
+      btnList.classList.remove('active');
+      cardsView.style.display = 'flex';
+      listView.style.display = 'none';
+    });
+    btnList.addEventListener('click', () => {
+      btnList.classList.add('active');
+      btnCards.classList.remove('active');
+      listView.style.display = 'table';
+      cardsView.style.display = 'none';
+    });
+
+    // Fonction pour récupérer et afficher toutes les écoles
+    async function loadEcoles() {
+      try {
+        const res = await fetch('/ecoles');
+        if (!res.ok) throw new Error('Erreur chargement écoles');
+        const ecoles = await res.json();
+
+        // Vider les vues
+        cardsView.innerHTML = '';
+        listBody.innerHTML = '';
+
+        ecoles.forEach(ecole => {
+          // === Vue “Carte” ===
+          const divCard = document.createElement('div');
+          divCard.className = 'card';
+          divCard.innerHTML = `
+            <h3>${ecole.nom}</h3>
+            <p><strong>Ville :</strong> ${ecole.ville || '-'}</p>
+            <p><strong>Adresse :</strong> ${ecole.adresse || '-'}</p>
+            <p><strong>Tél :</strong> ${ecole.telephone || '-'}</p>
+          `;
+          cardsView.appendChild(divCard);
+
+          // === Vue “Liste” ===
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${ecole.id}</td>
+            <td>${ecole.nom}</td>
+            <td>${ecole.ville || '-'}</td>
+            <td>${ecole.adresse || '-'}</td>
+            <td>${ecole.telephone || '-'}</td>
+          `;
+          listBody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
       }
-      breadcrumb.innerHTML = parts.join(' ');
     }
 
-    function goToDomaines() {
-      currentDomaine = null;
-      currentFiliere = null;
-      renderBreadcrumb();
-      fetch('/domaines')
-        .then(res => res.json())
-        .then(domaines => {
-          container.innerHTML = '';
-          domaines.forEach(d => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-              <div class="color-indicator" style="background-color:${d.couleur || '#3498db'};"></div>
-              <strong>${d.nom}</strong>
-            `;
-            card.onclick = () => {
-              currentDomaine = d;
-              goToFilieres(d.id);
-            };
-            container.appendChild(card);
-          });
-        });
-    }
-
-    function goToFilieres(domaineId) {
-      currentFiliere = null;
-      renderBreadcrumb();
-      fetch(`/filieres/${domaineId}`)
-        .then(res => res.json())
-        .then(filieres => {
-          container.innerHTML = '';
-          filieres.forEach(f => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.textContent = f.nom;
-            card.onclick = () => {
-              currentFiliere = f;
-              goToSpecialites(f.id);
-            };
-            container.appendChild(card);
-          });
-        });
-    }
-
-    function goToSpecialites(filiereId) {
-      renderBreadcrumb();
-      fetch(`/specialites/${filiereId}`)
-        .then(res => res.json())
-        .then(specialites => {
-          container.innerHTML = '';
-          specialites.forEach(s => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.textContent = s.nom;
-            container.appendChild(card);
-          });
-        });
-    }
-
-    goToDomaines();
+    // Au chargement, on récupère les écoles
+    window.addEventListener('DOMContentLoaded', () => {
+      loadEcoles();
+    });
   </script>
 </body>
 </html>

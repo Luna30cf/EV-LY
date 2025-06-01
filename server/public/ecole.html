@@ -2,169 +2,290 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="styles.css" />
-  <title>Gestion École</title>
+  <title>EV-LY – Gestion des Écoles</title>
+  <link id="themeStylesheet" href="/styles.css" rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+    }
+    header {
+      background-color: var(--primary);
+      color: #fff;
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    #toggleThemeBtn {
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    #backDashboard {
+      color: #fff;
+      text-decoration: none;
+      margin-left: 1rem;
+      font-size: 0.9rem;
+    }
+
+    #creationForm {
+      background-color: var(--card-bg);
+      margin: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    #creationForm label {
+      display: block;
+      margin-top: 0.5rem;
+      color: var(--text);
+    }
+    #creationForm input {
+      width: 100%;
+      padding: 0.4rem;
+      margin-top: 0.2rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background-color: var(--input-bg);
+      color: var(--text);
+      box-sizing: border-box;
+    }
+    #creationForm button {
+      margin-top: 1rem;
+      padding: 0.6rem 1.2rem;
+      background-color: var(--primary);
+      border: none;
+      color: #fff;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #errorMsg {
+      color: #e74c3c;
+      margin-top: 0.5rem;
+    }
+
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin: 1rem;
+    }
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      width: calc(33% - 2rem);
+      box-sizing: border-box;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .card h3 {
+      margin-top: 0;
+      color: var(--text);
+    }
+    .card p {
+      margin: 0.3rem 0;
+      color: var(--text);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem;
+    }
+    th, td {
+      padding: 0.6rem;
+      border: 1px solid var(--border);
+      text-align: left;
+      color: var(--text);
+    }
+    th {
+      background-color: var(--secondary);
+      color: #fff;
+    }
+    tr:nth-child(even) {
+      background-color: var(--row-bg);
+    }
+  </style>
 </head>
 <body>
-  <h1>Gestion de l'école</h1>
+  <header>
+    <div>
+      <a href="/dashboard/cards" id="backDashboard">◀ Retour Dashboard</a>
+      &nbsp;&nbsp;<span>Gestion des Écoles</span>
+    </div>
+    <div>
+      <span id="toggleThemeBtn" onclick="toggleTheme()">🌓</span>
+      &nbsp;|&nbsp;
+      <a href="/logout" style="color: #fff; text-decoration: none;">Déconnexion</a>
+    </div>
+  </header>
 
-  <h2>Ajouter un Domaine</h2>
-  <form id="addDomaineForm">
-    <input type="text" name="nom" placeholder="Nom du domaine" required>
-    <input type="color" name="couleur" value="#3498db" title="Choisir une couleur">
-    <button type="submit">Ajouter domaine</button>
-  </form>
+  <section id="creationForm">
+    <h2>Créer une nouvelle école</h2>
+    <div id="errorMsg"></div>
+    <form id="formCreate">
+      <label for="nom">Nom :</label>
+      <input type="text" id="nom" name="nom" required />
 
-  <ul id="domaineList"></ul>
+      <label for="ville">Ville :</label>
+      <input type="text" id="ville" name="ville" />
+
+      <label for="adresse">Adresse :</label>
+      <input type="text" id="adresse" name="adresse" />
+
+      <label for="telephone">Téléphone :</label>
+      <input type="text" id="telephone" name="telephone" />
+
+      <button type="submit">Créer l’école</button>
+    </form>
+  </section>
+
+  <section id="viewEcoles">
+    <div id="cardsView" class="card-container"></div>
+    <table id="listView">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Nom</th>
+          <th>Ville</th>
+          <th>Adresse</th>
+          <th>Téléphone</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="listBody"></tbody>
+    </table>
+  </section>
 
   <script>
-    const params = new URLSearchParams(window.location.search);
-    const ecoleId = params.get('ecole_id');
-    const isAdmin = params.get('admin') === '1';
-
-    const domaineList = document.getElementById('domaineList');
-
-    function loadDomaines() {
-      fetch(`/domaines${isAdmin ? '?ecole_id=' + ecoleId : ''}`)
-        .then(res => res.json())
-        .then(domaines => {
-          domaineList.innerHTML = '';
-          domaines.forEach(d => {
-            const li = document.createElement('li');
-
-            // Applique la couleur de fond
-            li.style.backgroundColor = d.couleur || '#3498db';
-            li.style.padding = '10px';
-            li.style.borderRadius = '8px';
-            li.style.marginBottom = '10px';
-            li.style.listStyle = 'none';
-
-            li.innerHTML = `
-              <strong>${d.nom}</strong>
-              <button onclick="deleteDomaine(${d.id})">Supprimer</button>
-              <ul id="filiereList-${d.id}"></ul>
-              <form onsubmit="addFiliere(event, ${d.id})">
-                <input type="text" name="nom" placeholder="Nom de la filière" required>
-                <button type="submit">Ajouter</button>
-              </form>
-            `;
-            domaineList.appendChild(li);
-            loadFilieres(d.id);
-          });
-        });
+    // Basculer clair / sombre
+    function toggleTheme() {
+      const themeLink = document.getElementById('themeStylesheet');
+      if (themeLink.getAttribute('href') === '/styles.css') {
+        themeLink.setAttribute('href', '/styles-dark.css');
+      } else {
+        themeLink.setAttribute('href', '/styles.css');
+      }
     }
 
-    function loadFilieres(domaineId) {
-      fetch(`/filieres/${domaineId}`)
-        .then(res => res.json())
-        .then(filieres => {
-          const ul = document.getElementById(`filiereList-${domaineId}`);
-          ul.innerHTML = '';
-          filieres.forEach(f => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-              ${f.nom}
-              <button onclick="deleteFiliere(${f.id}, ${domaineId})">Supprimer</button>
-              <ul id="specialiteList-${f.id}"></ul>
-              <form onsubmit="addSpecialite(event, ${f.id})">
-                <input type="text" name="nom" placeholder="Spécialité" required>
-                <button type="submit">Ajouter</button>
-              </form>
-            `;
-            ul.appendChild(li);
-            loadSpecialites(f.id);
+    // Fonctions pour charger / afficher les écoles
+    const cardsView = document.getElementById('cardsView');
+    const listView  = document.getElementById('listView');
+    const listBody  = document.getElementById('listBody');
+    const errorMsg  = document.getElementById('errorMsg');
+
+    // Charger toutes les écoles depuis l’API
+    async function loadEcoles() {
+      try {
+        const res = await fetch('/ecoles');
+        if (!res.ok) throw new Error('Erreur chargement écoles');
+        const ecoles = await res.json();
+
+        // Vider les vues
+        cardsView.innerHTML = '';
+        listBody.innerHTML = '';
+
+        ecoles.forEach(ecole => {
+          // ==== Carte ====
+          const divCard = document.createElement('div');
+          divCard.className = 'card';
+          divCard.innerHTML = `
+            <h3>${ecole.nom}</h3>
+            <p><strong>Ville :</strong> ${ecole.ville || '-'}</p>
+            <p><strong>Adresse :</strong> ${ecole.adresse || '-'}</p>
+            <p><strong>Tél :</strong> ${ecole.telephone || '-'}</p>
+            <button data-id="${ecole.id}" class="btnDelete">Supprimer</button>
+          `;
+          cardsView.appendChild(divCard);
+
+          // ==== Liste ====
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${ecole.id}</td>
+            <td>${ecole.nom}</td>
+            <td>${ecole.ville || '-'}</td>
+            <td>${ecole.adresse || '-'}</td>
+            <td>${ecole.telephone || '-'}</td>
+            <td><button data-id="${ecole.id}" class="btnDelete">Supprimer</button></td>
+          `;
+          listBody.appendChild(tr);
+        });
+
+        // Associer les boutons “Supprimer”
+        document.querySelectorAll('.btnDelete').forEach(btn => {
+          btn.addEventListener('click', async (e) => {
+            const id = e.target.getAttribute('data-id');
+            try {
+              const res = await fetch(`/ecoles/${id}`, { method: 'DELETE' });
+              const data = await res.json();
+              if (data.success) {
+                loadEcoles();
+              } else {
+                alert(data.error || 'Impossible de supprimer');
+              }
+            } catch (err) {
+              console.error(err);
+            }
           });
         });
+      } catch (err) {
+        console.error(err);
+      }
     }
 
-    function loadSpecialites(filiereId) {
-      fetch(`/specialites/${filiereId}`)
-        .then(res => res.json())
-        .then(specialites => {
-          const ul = document.getElementById(`specialiteList-${filiereId}`);
-          ul.innerHTML = '';
-          specialites.forEach(s => {
-            const li = document.createElement('li');
-            li.innerHTML = `
-              ${s.nom}
-              <button onclick="deleteSpecialite(${s.id}, ${filiereId})">Supprimer</button>
-            `;
-            ul.appendChild(li);
-          });
-        });
-    }
-
-    document.getElementById('addDomaineForm').addEventListener('submit', (e) => {
+    // Soumission du formulaire de création d’école
+    document.getElementById('formCreate').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const form = new FormData(e.target);
-      const data = { 
-        nom: form.get('nom'),
-        couleur: form.get('couleur') || '#3498db'
-      };
-      if (isAdmin) data.ecole_id = ecoleId;
+      errorMsg.textContent = '';
 
-      fetch('/domaines', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' }
-      }).then(() => {
-        e.target.reset();
-        loadDomaines();
-      });
+      const nom       = document.getElementById('nom').value.trim();
+      const ville     = document.getElementById('ville').value.trim();
+      const adresse   = document.getElementById('adresse').value.trim();
+      const telephone = document.getElementById('telephone').value.trim();
+
+      if (!nom) {
+        errorMsg.textContent = 'Le nom est requis.';
+        return;
+      }
+
+      const payload = { nom, ville, adresse, telephone, custom_fields: '{}' };
+
+      try {
+        const res = await fetch('/ecoles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          // On efface le formulaire
+          document.getElementById('nom').value = '';
+          document.getElementById('ville').value = '';
+          document.getElementById('adresse').value = '';
+          document.getElementById('telephone').value = '';
+          loadEcoles();
+        } else {
+          errorMsg.textContent = data.error || 'Erreur création';
+        }
+      } catch (err) {
+        console.error(err);
+        errorMsg.textContent = 'Erreur réseau';
+      }
     });
 
-    function addFiliere(e, domaineId) {
-      e.preventDefault();
-      const form = new FormData(e.target);
-      const data = { nom: form.get('nom'), domaine_id: domaineId };
-      fetch('/filieres', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' }
-      }).then(() => {
-        e.target.reset();
-        loadFilieres(domaineId);
-      });
-    }
-
-    function addSpecialite(e, filiereId) {
-      e.preventDefault();
-      const form = new FormData(e.target);
-      const data = { nom: form.get('nom'), filiere_id: filiereId };
-      fetch('/specialites', {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: { 'Content-Type': 'application/json' }
-      }).then(() => {
-        e.target.reset();
-        loadSpecialites(filiereId);
-      });
-    }
-
-    function deleteDomaine(id) {
-      if (confirm("Supprimer ce domaine ?")) {
-        fetch(`/domaines/${id}`, { method: 'DELETE' })
-          .then(() => loadDomaines());
-      }
-    }
-
-    // Ajout domaineId pour recharger la bonne liste filières
-    function deleteFiliere(id, domaineId) {
-      if (confirm("Supprimer cette filière ?")) {
-        fetch(`/filieres/${id}`, { method: 'DELETE' })
-          .then(() => loadFilieres(domaineId));
-      }
-    }
-
-    // Ajout filiereId pour recharger la bonne liste spécialités
-    function deleteSpecialite(id, filiereId) {
-      if (confirm("Supprimer cette spécialité ?")) {
-        fetch(`/specialites/${id}`, { method: 'DELETE' })
-          .then(() => loadSpecialites(filiereId));
-      }
-    }
-
-    loadDomaines();
+    // Au chargement, on affiche tout
+    window.addEventListener('DOMContentLoaded', () => {
+      loadEcoles();
+    });
   </script>
 </body>
 </html>
